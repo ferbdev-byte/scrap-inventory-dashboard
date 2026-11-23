@@ -1,10 +1,26 @@
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Boxes, Coins, Search, TrendingUp, Truck } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from 'recharts'
-import { computeStock, dailyFlow, kpis, lowStock, tons, vnd, type Direction } from './lib/inventory'
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Boxes, Coins, FileUp, Moon, Search, Sun, Truck, X } from 'lucide-react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import type { ChartPalette } from './components/Charts'
+import { parseJsonl } from './lib/importJsonl'
+import { computeStock, dailyFlow, kpis, lowStock, tons, vnd, type Direction, type Txn } from './lib/inventory'
 import { MATERIALS, sampleTxns } from './lib/sample'
+
+const Charts = lazy(() => import('./components/Charts'))
+
+type Theme = 'dark' | 'light'
+const PALETTES: Record<Theme, ChartPalette> = {
+  dark: { grid: '#262a30', axis: '#5b626c', label: '#a3aab4', tooltipBg: '#131518', tooltipBorder: '#262a30', cursor: '#1b1e22', gold: '#e3b341' },
+  light: { grid: '#e2e5ea', axis: '#8a919c', label: '#4b5361', tooltipBg: '#ffffff', tooltipBorder: '#e2e5ea', cursor: '#f0f2f5', gold: '#b8861b' },
+}
+
+// localStorage có thể bị chặn (chế độ riêng tư, iframe): luôn bọc try/catch
+function loadTheme(): Theme {
+  try {
+    const saved = localStorage.getItem('theme')
+    if (saved === 'dark' || saved === 'light') return saved
+  } catch { /* bỏ qua */ }
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+}
 
 const TODAY = '2026-11-23'
 const RANGES = { '7 ngày': 7, '30 ngày': 30, '60 ngày': 60 } as const
@@ -13,11 +29,6 @@ type RangeKey = keyof typeof RANGES
 const byCode = Object.fromEntries(MATERIALS.map((m) => [m.code, m]))
 const shiftDate = (d: string, days: number) => new Date(new Date(d + 'T00:00:00Z').getTime() - days * 86_400_000).toISOString().slice(0, 10)
 const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`
-
-const tooltipStyle = {
-  contentStyle: { background: '#131518', border: '1px solid #262a30', borderRadius: 12, fontSize: 12 },
-  labelStyle: { color: '#a3aab4' },
-}
 
 function Kpi({ icon: Icon, label, value, unit, hint }: { icon: typeof Boxes; label: string; value: string; unit: string; hint?: string }) {
   return (
@@ -34,7 +45,34 @@ function Kpi({ icon: Icon, label, value, unit, hint }: { icon: typeof Boxes; lab
 }
 
 export default function App() {
-  const txns = useMemo(() => sampleTxns(TODAY), [])
+  const sample = useMemo(() => sampleTxns(TODAY), [])
+  const [imported, setImported] = useState<Txn[]>([])
+  const [notice, setNotice] = useState<{ ok: boolean; text: string; details: string[] } | null>(null)
+  const [theme, setTheme] = useState<Theme>(loadTheme)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { localStorage.setItem('theme', theme) } catch { /* bỏ qua */ }
+  }, [theme])
+
+  const txns = useMemo(() => [...sample, ...imported], [sample, imported])
+
+  async function onFile(file: File) {
+    const { txns: rows, errors } = parseJsonl(await file.text(), MATERIALS, `F${Date.now() % 10000}-`)
+    try {
+      computeStock([...txns, ...rows]) // chặn trường hợp xuất quá tồn
+    } catch (e) {
+      setNotice({ ok: false, text: 'Không nhập được: ' + (e as Error).message, details: [] })
+      return
+    }
+    setImported((prev) => [...prev, ...rows])
+    setNotice({
+      ok: errors.length === 0,
+      text: `Đã nhập ${rows.length} phiếu từ ${file.name}` + (errors.length ? `, bỏ qua ${errors.length} dòng lỗi` : ''),
+      details: errors.slice(0, 5),
+    })
+  }
   const [range, setRange] = useState<RangeKey>('30 ngày')
   const [query, setQuery] = useState('')
   const [dir, setDir] = useState<Direction | 'all'>('all')
@@ -70,18 +108,40 @@ export default function App() {
             <span className="rounded-md bg-ink-800 px-1.5 py-0.5 text-xs text-ink-300">dữ liệu mẫu</span>
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <input ref={fileRef} type="file" accept=".jsonl,.json,application/x-ndjson" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = '' }} />
+        <button onClick={() => fileRef.current?.click()}
+          className="flex items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-300 transition hover:border-gold hover:text-gold">
+          <FileUp size={15} /> Nhập phiếu cân
+        </button>
+        <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Đổi giao diện sáng / tối"
+          className="rounded-xl border border-ink-700 bg-ink-900 p-2.5 text-ink-300 transition hover:border-gold hover:text-gold">
+          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
         <div className="flex rounded-xl border border-ink-700 bg-ink-900 p-1">
           {(Object.keys(RANGES) as RangeKey[]).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`rounded-lg px-3 py-1.5 text-sm transition ${r === range ? 'bg-gold font-medium text-ink-950' : 'text-ink-300 hover:text-white'}`}
+              className={`rounded-lg px-3 py-1.5 text-sm transition ${r === range ? 'bg-gold font-medium text-ink-950' : 'text-ink-300 hover:text-gold'}`}
             >
               {r}
             </button>
           ))}
         </div>
+        </div>
       </header>
+
+      {notice && (
+        <div role="status" className={`mb-4 flex items-start justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${notice.ok ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500' : 'border-gold/40 bg-gold/10 text-gold'}`}>
+          <div>
+            <div>{notice.text}</div>
+            {notice.details.map((d) => <div key={d} className="mt-1 text-xs opacity-80">{d}</div>)}
+          </div>
+          <button onClick={() => setNotice(null)} aria-label="Đóng"><X size={15} /></button>
+        </div>
+      )}
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi icon={Boxes} label="Tồn kho hiện tại" value={tons(k.stockKg)} unit="tấn" hint={`Giá vốn ${vnd(k.stockValue)} đ`} />
@@ -92,48 +152,9 @@ export default function App() {
       </section>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-5">
-        <div className="card min-w-0 lg:col-span-3">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-300">
-            <span className="flex items-center gap-2"><TrendingUp size={16} className="text-gold" /> Nhập – xuất theo ngày</span>
-            <span className="flex gap-4 text-xs">
-              <span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-gold" /> Thu mua</span>
-              <span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-sky-400" /> Bán ra</span>
-            </span>
-          </div>
-          <div className="h-72">
-            <ResponsiveContainer>
-              <AreaChart data={flow} margin={{ left: 0, right: 8, top: 4 }}>
-                <defs>
-                  <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#e3b341" stopOpacity={0.45} /><stop offset="1" stopColor="#e3b341" stopOpacity={0} /></linearGradient>
-                  <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#38bdf8" stopOpacity={0.35} /><stop offset="1" stopColor="#38bdf8" stopOpacity={0} /></linearGradient>
-                </defs>
-                <CartesianGrid stroke="#262a30" vertical={false} />
-                <XAxis dataKey="label" tick={{ fill: '#5b626c', fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={16} />
-                <YAxis tick={{ fill: '#5b626c', fontSize: 11 }} axisLine={false} tickLine={false} width={48} tickFormatter={(v: number) => `${v / 1000}t`} />
-                <Tooltip {...tooltipStyle} formatter={(v) => `${vnd(Number(v))} kg`} />
-                <Area type="monotone" dataKey="nhap" name="Thu mua" stroke="#e3b341" fill="url(#gIn)" strokeWidth={2} />
-                <Area type="monotone" dataKey="xuat" name="Bán ra" stroke="#38bdf8" fill="url(#gOut)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="card min-w-0 lg:col-span-2">
-          <div className="mb-4 flex items-center gap-2 text-sm text-ink-300"><Boxes size={16} className="text-gold" /> Giá trị tồn theo loại (triệu đ)</div>
-          <div className="h-72">
-            <ResponsiveContainer>
-              <BarChart data={stockRows} layout="vertical" margin={{ left: 8, right: 16 }}>
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={96} tick={{ fill: '#a3aab4', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip {...tooltipStyle} cursor={{ fill: '#1b1e22' }}
-                  formatter={(v, _n, p) => [`${vnd(Number(v) / 1e6)} triệu đ · ${tons(p.payload.kg)} tấn`, 'Tồn']} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {stockRows.map((r) => <Cell key={r.code} fill={r.color} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <Suspense fallback={<><div className="card h-[352px] animate-pulse lg:col-span-3" /><div className="card h-[352px] animate-pulse lg:col-span-2" /></>}>
+          <Charts flow={flow} stockRows={stockRows} palette={PALETTES[theme]} />
+        </Suspense>
       </section>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -167,7 +188,7 @@ export default function App() {
                 {rows.map((t) => (
                   <tr key={t.id} className="border-t border-ink-800 hover:bg-ink-800/50">
                     <td className="py-2">
-                      <span className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${t.direction === 'nhap' ? 'bg-gold/15 text-gold' : 'bg-sky-400/15 text-sky-300'}`}>{t.id}</span>
+                      <span className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${t.direction === 'nhap' ? 'bg-gold/15 text-gold' : 'bg-sky-400/15 text-sky-500'}`}>{t.id}</span>
                     </td>
                     <td className="text-ink-300">{ddmm(t.date)}</td>
                     <td>
@@ -216,7 +237,7 @@ export default function App() {
       </section>
 
       <footer className="mt-10 text-center text-xs text-ink-500">
-        Số liệu trên trang là dữ liệu mẫu sinh tự động, không phải số liệu kinh doanh thật ·{' '}
+        Số liệu mặc định là dữ liệu mẫu sinh tự động, không phải số liệu kinh doanh thật. Phiếu nhập từ file chỉ nằm trong trình duyệt của bạn ·{' '}
         <a className="text-ink-300 hover:text-gold" href="https://github.com/ferbdev-byte/scrap-inventory-dashboard">Mã nguồn</a>
       </footer>
     </div>
