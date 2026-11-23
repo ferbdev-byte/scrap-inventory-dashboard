@@ -6,5 +6,5 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: process.env.GITHUB_ACTIONS ? '/scrap-inventory-dashboard/' : '/',
   plugins: [react(), tailwindcss()],
-  test: { environment: 'node' },
+  test: { environment: 'node', include: ['src/**/*.test.ts'] },
 } as never)

@@ -24,7 +24,9 @@ Dashboard **tồn kho phế liệu** cho vựa và công ty thu mua. Trang hiể
 - **Nhập phiếu cân từ file**: kéo file `.jsonl` do [weighbridge-reader](https://github.com/ferbdev-byte/weighbridge-reader) ghi ra từ đầu cân, tự nhận loại hàng theo tên viết tự do, trừ tạp chất, báo lỗi từng dòng. Chặn trường hợp xuất quá tồn.
 - **Giao diện sáng / tối**: theo cài đặt hệ điều hành, nhớ lựa chọn của bạn.
 - **Tải nhanh**: phần biểu đồ được tách ra tải sau (`React.lazy`), bundle chính chỉ ~78 KB gzip.
-- Dùng được trên điện thoại (bảng cuộn ngang, không vỡ layout).
+- **Xuất CSV** đúng phần bảng đang lọc, mở bằng Excel không lỗi dấu (UTF-8 BOM), có chặn chèn công thức Excel.
+- **Kéo thả file** phiếu cân vào bất kỳ đâu trên trang để nhập.
+- Dùng được trên điện thoại (bảng cuộn ngang, không vỡ layout), dùng được bằng bàn phím (viền focus rõ ràng).
 
 ## Kiến trúc
 
@@ -42,7 +44,9 @@ src/
 
 Logic tính toán tách hẳn khỏi giao diện, nên muốn nối dữ liệu thật thì chỉ cần thay `sampleTxns()` bằng dữ liệu từ API hoặc từ file phiếu cân của [weighbridge-reader](https://github.com/ferbdev-byte/weighbridge-reader).
 
-Test bao gồm: giá vốn bình quân, xuất không làm đổi giá vốn, chặn xuất quá tồn, giao dịch không theo thứ tự ngày, lãi gộp, ngưỡng cảnh báo, và dữ liệu mẫu không bao giờ âm kho.
+**Test E2E (Playwright)** chạy trên Chrome desktop và giả lập Pixel 7: nhập file, kéo thả, lọc và tìm kiếm, xuất CSV, đổi giao diện, không tràn ngang. Trang có lỗi JS là test fail. Bản deploy chỉ lên khi cả unit test lẫn E2E đều pass.
+
+Unit test bao gồm: giá vốn bình quân, xuất không làm đổi giá vốn, chặn xuất quá tồn, giao dịch không theo thứ tự ngày, lãi gộp, ngưỡng cảnh báo, và dữ liệu mẫu không bao giờ âm kho.
 
 ## Chạy
 
@@ -50,6 +54,7 @@ Test bao gồm: giá vốn bình quân, xuất không làm đổi giá vốn, ch
 npm install
 npm run dev      # http://localhost:5173
 npm test         # Vitest
+npm run e2e      # Playwright (lần đầu: npx playwright install chromium)
 npm run build    # ra thư mục dist/
 ```
 
