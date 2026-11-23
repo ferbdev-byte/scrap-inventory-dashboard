@@ -90,7 +90,8 @@ test('có thẻ Open Graph để chia sẻ link hiện ảnh xem trước', asyn
   expect(await og('og:title')).toContain('Scrap Inventory Dashboard')
   const image = await og('og:image')
   expect(image).toMatch(/^https:\/\/.+\/og\.png$/)
-  const local = await request.get('og.png')
+  // Lấy theo URL của trang: khi deploy, trang nằm dưới /scrap-inventory-dashboard/
+  const local = await request.get(new URL('og.png', page.url()).href)
   expect(local.ok()).toBe(true)
   expect(local.headers()['content-type']).toContain('image/png')
 })
