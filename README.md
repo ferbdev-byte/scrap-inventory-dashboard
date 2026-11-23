@@ -21,7 +21,10 @@ Dashboard **tồn kho phế liệu** cho vựa và công ty thu mua. Trang hiể
 - **Bảng phiếu cân**: lọc thu mua/bán ra, tìm theo biển số, đối tác hoặc loại hàng.
 - **Cảnh báo tồn thấp** theo ngưỡng riêng của từng loại.
 - **Giá vốn bình quân gia quyền di động**: lãi gộp tính theo giá vốn *tại thời điểm bán*, không lấy giá cuối kỳ.
-- Giao diện tối, dùng được trên điện thoại (bảng cuộn ngang, không vỡ layout).
+- **Nhập phiếu cân từ file**: kéo file `.jsonl` do [weighbridge-reader](https://github.com/ferbdev-byte/weighbridge-reader) ghi ra từ đầu cân, tự nhận loại hàng theo tên viết tự do, trừ tạp chất, báo lỗi từng dòng. Chặn trường hợp xuất quá tồn.
+- **Giao diện sáng / tối**: theo cài đặt hệ điều hành, nhớ lựa chọn của bạn.
+- **Tải nhanh**: phần biểu đồ được tách ra tải sau (`React.lazy`), bundle chính chỉ ~78 KB gzip.
+- Dùng được trên điện thoại (bảng cuộn ngang, không vỡ layout).
 
 ## Kiến trúc
 
@@ -30,8 +33,10 @@ src/
 ├── lib/
 │   ├── inventory.ts       ← logic thuần: tồn kho, giá vốn, dòng nhập–xuất, KPI (không phụ thuộc React)
 │   ├── inventory.test.ts  ← test Vitest cho logic
+│   ├── importJsonl.ts     ← đọc phiếu cân JSON Lines (+ test)
 │   └── sample.ts          ← sinh dữ liệu mẫu có hạt giống cố định
-├── App.tsx                ← giao diện (Recharts + Tailwind v4 + lucide-react)
+├── components/Charts.tsx  ← biểu đồ Recharts, tải lười
+├── App.tsx                ← giao diện (Tailwind v4 + lucide-react)
 └── index.css              ← theme
 ```
 

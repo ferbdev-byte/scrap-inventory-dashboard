@@ -12,9 +12,24 @@
 }
 
 html {
+  --text: #e7e9ec;
   background: var(--color-ink-950);
-  color: #e7e9ec;
+  color: var(--text);
   font-feature-settings: "tnum";
+  color-scheme: dark;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html[data-theme="light"] {
+  --text: #14171c;
+  --color-ink-950: #f5f6f8;
+  --color-ink-900: #ffffff;
+  --color-ink-800: #f0f2f5;
+  --color-ink-700: #e2e5ea;
+  --color-ink-500: #8a919c;
+  --color-ink-300: #4b5361;
+  --color-gold: #b8861b;
+  color-scheme: light;
 }
 
 .card {
