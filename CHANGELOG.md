@@ -2,6 +2,12 @@
 
 Theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/) và [SemVer](https://semver.org/lang/vi/).
 
+## [Chưa phát hành]
+
+### Thêm
+
+- Thẻ Open Graph và ảnh xem trước 1200×630: chia sẻ link demo lên LinkedIn, Facebook, Zalo sẽ hiện ảnh và mô tả.
+
 ## [0.3.0] - 2026-11-23
 
 ### Thêm
