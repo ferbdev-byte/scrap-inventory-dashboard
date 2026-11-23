@@ -35,3 +35,9 @@ html[data-theme="light"] {
 .card {
   @apply rounded-2xl border border-ink-700/70 bg-ink-900/80 p-5;
 }
+
+/* Viền focus rõ ràng khi dùng bàn phím, không hiện khi bấm chuột */
+:where(button, select, input, a):focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}

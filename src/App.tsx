@@ -59,6 +59,35 @@ export default function App() {
 
   const txns = useMemo(() => [...sample, ...imported], [sample, imported])
 
+  // Kéo thả file vào bất kỳ đâu trên trang. Đếm enter/leave để lớp phủ không nhấp nháy khi đi qua phần tử con.
+  const [dragging, setDragging] = useState(false)
+  const onFileRef = useRef<(f: File) => void>(() => {})
+  useEffect(() => {
+    let depth = 0
+    const hasFile = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    const enter = (e: DragEvent) => { if (hasFile(e)) { depth++; setDragging(true) } }
+    const leave = (e: DragEvent) => { if (hasFile(e) && --depth <= 0) { depth = 0; setDragging(false) } }
+    const over = (e: DragEvent) => { if (hasFile(e)) e.preventDefault() }
+    const drop = (e: DragEvent) => {
+      if (!hasFile(e)) return
+      e.preventDefault()
+      depth = 0
+      setDragging(false)
+      const f = e.dataTransfer?.files?.[0]
+      if (f) onFileRef.current(f)
+    }
+    window.addEventListener('dragenter', enter)
+    window.addEventListener('dragleave', leave)
+    window.addEventListener('dragover', over)
+    window.addEventListener('drop', drop)
+    return () => {
+      window.removeEventListener('dragenter', enter)
+      window.removeEventListener('dragleave', leave)
+      window.removeEventListener('dragover', over)
+      window.removeEventListener('drop', drop)
+    }
+  }, [])
+
   async function onFile(file: File) {
     const { txns: rows, errors } = parseJsonl(await file.text(), MATERIALS, `F${Date.now() % 10000}-`)
     try {
@@ -77,6 +106,8 @@ export default function App() {
   const [range, setRange] = useState<RangeKey>('30 ngày')
   const [query, setQuery] = useState('')
   const [dir, setDir] = useState<Direction | 'all'>('all')
+
+  useEffect(() => { onFileRef.current = onFile })
 
   const days = RANGES[range]
   const from = shiftDate(TODAY, days - 1)
@@ -133,6 +164,16 @@ export default function App() {
         </div>
         </div>
       </header>
+
+      {dragging && (
+        <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-ink-950/80 backdrop-blur-sm">
+          <div className="rounded-2xl border-2 border-dashed border-gold px-10 py-8 text-center">
+            <FileUp size={28} className="mx-auto text-gold" />
+            <div className="mt-3 text-lg font-semibold">Thả file phiếu cân để nhập</div>
+            <div className="mt-1 text-sm text-ink-300">File .jsonl ghi từ weighbridge-reader</div>
+          </div>
+        </div>
+      )}
 
       {notice && (
         <div role="status" className={`mb-4 flex items-start justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${notice.ok ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500' : 'border-gold/40 bg-gold/10 text-gold'}`}>
