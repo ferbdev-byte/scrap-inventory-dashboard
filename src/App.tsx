@@ -1,6 +1,7 @@
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Boxes, Coins, FileUp, Moon, Search, Sun, Truck, X } from 'lucide-react'
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Boxes, Coins, Download, FileUp, Moon, Search, Sun, Truck, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChartPalette } from './components/Charts'
+import { downloadCsv, toCsv } from './lib/exportCsv'
 import { parseJsonl } from './lib/importJsonl'
 import { computeStock, dailyFlow, kpis, lowStock, tons, vnd, type Direction, type Txn } from './lib/inventory'
 import { MATERIALS, sampleTxns } from './lib/sample'
@@ -161,7 +162,11 @@ export default function App() {
         <div className="card min-w-0 lg:col-span-2">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm text-ink-300"><Truck size={16} className="text-gold" /> Phiếu cân {range} · {rows.length} phiếu</div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => downloadCsv(`phieu-can-${from}-${TODAY}.csv`, toCsv(rows, MATERIALS))} disabled={!rows.length}
+                className="flex items-center gap-1.5 rounded-lg border border-ink-700 bg-ink-800 px-2.5 py-1.5 text-sm text-ink-300 transition hover:border-gold hover:text-gold disabled:opacity-40">
+                <Download size={14} /> CSV
+              </button>
               <select value={dir} onChange={(e) => setDir(e.target.value as Direction | 'all')}
                 className="rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm outline-none">
                 <option value="all">Tất cả</option>
