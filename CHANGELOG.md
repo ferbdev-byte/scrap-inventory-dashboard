@@ -2,6 +2,15 @@
 
 Theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/) và [SemVer](https://semver.org/lang/vi/).
 
+## [0.3.0] - 2026-11-23
+
+### Thêm
+
+- Xuất CSV phần bảng phiếu cân đang lọc (UTF-8 BOM cho Excel, chặn chèn công thức).
+- Kéo thả file phiếu cân vào trang để nhập.
+- Viền focus rõ ràng khi dùng bàn phím.
+- Test E2E bằng Playwright (desktop + điện thoại) chạy trong CI; deploy chỉ khi E2E pass.
+
 ## [0.2.0] - 2026-11-23
 
 ### Thêm
